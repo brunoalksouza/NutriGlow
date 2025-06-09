@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "tip": "Drink 500 ml of water before each meal to curb hunger.",
+    "category": "hydration"
+  },
+  {
+    "id": 2,
+    "tip": "Eat slowly and mindfully to recognize when you're full.",
+    "category": "mindfulness"
+  },
+  {
+    "id": 3,
+    "tip": "Add protein to every meal to stay fuller longer.",
+    "category": "nutrition"
+  },
+  {
+    "id": 4,
+    "tip": "Prepare your meals in advance to avoid unhealthy choices when hungry.",
+    "category": "planning"
+  },
+  {
+    "id": 5,
+    "tip": "Use smaller plates to control portion sizes naturally.",
+    "category": "portion"
+  },
+  {
+    "id": 6,
+    "tip": "Include vegetables in at least two meals per day.",
+    "category": "nutrition"
+  },
+  {
+    "id": 7,
+    "tip": "Take a 10-minute walk after meals to aid digestion.",
+    "category": "activity"
+  },
+  {
+    "id": 8,
+    "tip": "Avoid eating 2-3 hours before bedtime for better sleep.",
+    "category": "timing"
+  },
+  {
+    "id": 9,
+    "tip": "Replace sugary drinks with water, tea, or infused water.",
+    "category": "hydration"
+  },
+  {
+    "id": 10,
+    "tip": "Read nutrition labels to make informed food choices.",
+    "category": "awareness"
+  }
+]
