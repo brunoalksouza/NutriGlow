@@ -13,6 +13,8 @@ import { AuthGuard } from "@/components/auth-guard"
 import { LockedContent } from "@/components/locked-content"
 import { ProBadge } from "@/components/pro-badge"
 import { useSupa } from "@/contexts/supa-provider"
+import { NotificationService } from "@/lib/notifications"
+import { DietDebug } from "@/components/diet-debug"
 
 interface DietPlan {
   totalCalories: number
@@ -37,36 +39,56 @@ export default function DietPage() {
 
   useEffect(() => {
     const loadDiet = async () => {
-      if (!user) {
-        router.push("/login")
-        return
-      }
+      setIsLoading(true)
 
       try {
-        // Get the latest diet for the user
-        const { data, error } = await supabase
-          .from("diets")
-          .select("plan")
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .single()
+        // First try to load from database if user is authenticated
+        if (user) {
+          const { data, error } = await supabase
+            .from("diets")
+            .select("plan")
+            .eq("user_id", user.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .single()
 
-        if (error) {
-          console.error("Error loading diet:", error)
-          // If no diet found, redirect to onboarding
-          router.push("/onboarding")
-          return
+          if (data?.plan) {
+            setDietPlan(data.plan)
+            setIsLoading(false)
+            return
+          }
         }
 
-        if (data?.plan) {
-          setDietPlan(data.plan)
+        // Fallback to localStorage
+        const storedDiet = localStorage.getItem("currentDiet")
+        if (storedDiet) {
+          try {
+            const parsedDiet = JSON.parse(storedDiet)
+            setDietPlan(parsedDiet)
+            setIsLoading(false)
+            return
+          } catch (error) {
+            console.error("Error parsing stored diet:", error)
+          }
+        }
+
+        // If no diet found anywhere, redirect to onboarding
+        router.push("/onboarding")
+      } catch (err) {
+        console.error("Unexpected error:", err)
+
+        // Try localStorage as final fallback
+        const storedDiet = localStorage.getItem("currentDiet")
+        if (storedDiet) {
+          try {
+            const parsedDiet = JSON.parse(storedDiet)
+            setDietPlan(parsedDiet)
+          } catch (error) {
+            router.push("/onboarding")
+          }
         } else {
           router.push("/onboarding")
         }
-      } catch (err) {
-        console.error("Unexpected error:", err)
-        router.push("/onboarding")
       } finally {
         setIsLoading(false)
       }
@@ -74,6 +96,13 @@ export default function DietPage() {
 
     loadDiet()
   }, [router, user, supabase])
+
+  useEffect(() => {
+    if (dietPlan?.meals) {
+      // Schedule meal reminders
+      NotificationService.scheduleMealReminders(dietPlan.meals)
+    }
+  }, [dietPlan])
 
   const handleEditAnswers = () => {
     router.push("/onboarding")
@@ -266,6 +295,11 @@ export default function DietPage() {
               </ul>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Debug Component - Remove in production */}
+        <div className="mt-6">
+          <DietDebug />
         </div>
 
         <BottomNavigation currentPage="diet" />

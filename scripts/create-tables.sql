@@ -1,5 +1,7 @@
+-- @env DATABASE_URL,POSTGRES_URL_NON_POOLING
+
 -- Create profiles table
-create table profiles (
+create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   name text,
   age int,
@@ -12,7 +14,7 @@ create table profiles (
 );
 
 -- Create diets table
-create table diets (
+create table if not exists diets (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references profiles(id) on delete cascade,
   plan jsonb,          -- full diet plan response

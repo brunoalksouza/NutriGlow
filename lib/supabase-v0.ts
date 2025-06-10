@@ -1,16 +1,14 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Use as variáveis de ambiente que estão disponíveis no v0
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// Configurações do Supabase
+const supabaseUrl = "https://ibrigockwxacbpoiocpf.supabase.co"
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlicmlnb2Nrd3hhY2Jwb2lvY3BmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0OTcwOTgsImV4cCI6MjA2NTA3MzA5OH0.DeoWU6Wy89X72mYrAaPdxDtPSH4g6wVssTlY2wp11CU"
 
 // Verificar se as variáveis estão definidas
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Supabase environment variables are not defined")
+  console.warn("Supabase credentials not found, running in demo mode")
 }
-
-console.log("Supabase URL:", supabaseUrl)
-console.log("Supabase Key (first 10 chars):", supabaseAnonKey.substring(0, 10) + "...")
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

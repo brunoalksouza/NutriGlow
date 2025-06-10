@@ -1,3 +1,5 @@
+-- @env DATABASE_URL,POSTGRES_URL_NON_POOLING
+
 -- Create subscriptions table
 create table if not exists subscriptions (
   id uuid primary key default gen_random_uuid(),

@@ -1,12 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { SupaProvider } from "@/contexts/supa-provider"
-import { ToastProvider } from "@/components/toast"
-import { RealtimeSync } from "@/components/realtime-sync"
-
-const inter = Inter({ subsets: ["latin"] })
+import ClientRootLayout from "./client-layout"
 
 export const metadata: Metadata = {
   title: "NutriGlow - Dieta Personalizada",
@@ -27,22 +21,8 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="pt-BR">
-      <head>
-        <link rel="apple-touch-icon" href="/icon-192x192.png" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="NutriGlow" />
-      </head>
-      <body className={inter.className}>
-        <SupaProvider>
-          <ToastProvider>
-            <RealtimeSync />
-            {children}
-          </ToastProvider>
-        </SupaProvider>
-      </body>
-    </html>
-  )
+  return <ClientRootLayout children={children} />
 }
+
+
+import './globals.css'

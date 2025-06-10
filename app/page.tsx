@@ -4,23 +4,51 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Heart, Sparkles, Target, Users } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Heart, Sparkles, Target, Users, AlertCircle, CheckCircle } from "lucide-react"
 import { AuthGuard } from "@/components/auth-guard"
+import { DebugEnv } from "@/components/debug-env"
+import { useSupabaseTest } from "@/hooks/use-supabase-test"
+import { FullDiagnostic } from "@/components/full-diagnostic"
 
 export default function WelcomePage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const { connectionStatus, error } = useSupabaseTest()
 
   const handleStart = async () => {
     setIsLoading(true)
     await new Promise((resolve) => setTimeout(resolve, 500))
-    router.push("/onboarding")
+    router.push("/signup")
   }
 
   return (
     <AuthGuard requireAuth={false}>
       <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
         <div className="container mx-auto px-4 py-8 max-w-md">
+          {/* Debug component */}
+          <DebugEnv />
+
+          {/* Full Diagnostic Component */}
+          <FullDiagnostic />
+
+          {/* Connection Status */}
+          {connectionStatus === "error" && (
+            <Alert className="border-red-200 bg-red-50 mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-red-700">Erro de conexão com Supabase: {error}</AlertDescription>
+            </Alert>
+          )}
+
+          {connectionStatus === "connected" && (
+            <Alert className="border-green-200 bg-green-50 mb-4">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription className="text-green-700">
+                Conexão com Supabase estabelecida com sucesso!
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -83,14 +111,16 @@ export default function WelcomePage() {
             <div className="pt-4">
               <Button
                 onClick={handleStart}
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"
+                disabled={isLoading || connectionStatus === "error"}
+                className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6 text-lg font-semibold rounded-xl shadow-lg disabled:opacity-50"
               >
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Carregando...</span>
                   </div>
+                ) : connectionStatus === "error" ? (
+                  "Erro de Conexão"
                 ) : (
                   "Começar"
                 )}
