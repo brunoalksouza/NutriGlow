@@ -2,23 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
 import type { User } from "@supabase/supabase-js"
-
-// Importar o cliente Supabase de forma mais segura
-let supabase: any = null
-
-// Função para inicializar o Supabase de forma segura
-const initSupabase = async () => {
-  try {
-    const { supabase: supabaseClient } = await import("@/lib/supabase-v0")
-    return supabaseClient
-  } catch (error) {
-    console.error("Failed to initialize Supabase:", error)
-    return null
-  }
-}
+import { supabase } from "@/lib/supabase-v0"
 
 interface SupaContextType {
-  supabase: any
+  supabase: typeof supabase | null
   user: User | null
   loading: boolean
   isConnected: boolean
@@ -44,26 +31,36 @@ export function SupaProvider({ children }: SupaProviderProps) {
   const [isConnected, setIsConnected] = useState(false)
 
   useEffect(() => {
-    // Inicializar Supabase de forma assíncrona
     const initialize = async () => {
       try {
-        supabase = await initSupabase()
+        console.log("🔄 Initializing Supabase...")
 
+        // Verificar se o cliente foi criado corretamente
         if (!supabase) {
-          console.log("Supabase not available, running in demo mode")
+          console.error("❌ Supabase client is null")
           setIsConnected(false)
           setLoading(false)
           return
         }
 
+        // Verificar se tem os métodos necessários
+        if (!supabase.auth) {
+          console.error("❌ Supabase auth is not available")
+          setIsConnected(false)
+          setLoading(false)
+          return
+        }
+
+        console.log("✅ Supabase client initialized")
+
         // Test connection
         const { data, error } = await supabase.auth.getSession()
 
         if (error) {
-          console.error("Supabase connection error:", error)
+          console.error("❌ Supabase connection error:", error)
           setIsConnected(false)
         } else {
-          console.log("Supabase connected successfully")
+          console.log("✅ Supabase connected successfully")
           setIsConnected(true)
           setUser(data.session?.user ?? null)
 
@@ -71,14 +68,17 @@ export function SupaProvider({ children }: SupaProviderProps) {
           const {
             data: { subscription },
           } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
+            console.log("🔄 Auth state changed:", _event)
             setUser(session?.user ?? null)
-            setLoading(false)
           })
 
-          return () => subscription.unsubscribe()
+          return () => {
+            console.log("🧹 Cleaning up auth listener")
+            subscription.unsubscribe()
+          }
         }
       } catch (err) {
-        console.error("Failed to connect to Supabase:", err)
+        console.error("❌ Failed to initialize Supabase:", err)
         setIsConnected(false)
       } finally {
         setLoading(false)
@@ -88,5 +88,9 @@ export function SupaProvider({ children }: SupaProviderProps) {
     initialize()
   }, [])
 
-  return <SupaContext.Provider value={{ supabase, user, loading, isConnected }}>{children}</SupaContext.Provider>
+  return (
+    <SupaContext.Provider value={{ supabase: isConnected ? supabase : null, user, loading, isConnected }}>
+      {children}
+    </SupaContext.Provider>
+  )
 }

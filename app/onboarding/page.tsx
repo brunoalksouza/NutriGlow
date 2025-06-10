@@ -1,217 +1,251 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useUser, useSupabaseClient } from "@supabase/auth-helpers-react"
-import GrokStatus from "@/components/grok-status"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
+import { ArrowLeft, ArrowRight } from "lucide-react"
 
-const OnboardingPage = () => {
-  const [formData, setFormData] = useState({
+interface FormData {
+  goal: string
+  age: string
+  weight: string
+  height: string
+  hasRestrictions: string
+  restrictions: string
+  mealsPerDay: string
+  activityLevel: string
+}
+
+const questions = [
+  {
+    id: "goal",
+    title: "Qual é o seu objetivo principal?",
+    type: "radio",
+    options: [
+      { value: "lose", label: "Emagrecer" },
+      { value: "maintain", label: "Manter Peso" },
+      { value: "gain", label: "Ganhar Massa" },
+    ],
+  },
+  {
+    id: "age",
+    title: "Qual é a sua idade?",
+    type: "input",
+    inputType: "number",
+    placeholder: "Ex: 25",
+  },
+  {
+    id: "weight",
+    title: "Qual é o seu peso atual?",
+    type: "input",
+    inputType: "number",
+    placeholder: "Ex: 65",
+    suffix: "kg",
+  },
+  {
+    id: "height",
+    title: "Qual é a sua altura?",
+    type: "input",
+    inputType: "number",
+    placeholder: "Ex: 165",
+    suffix: "cm",
+  },
+  {
+    id: "hasRestrictions",
+    title: "Possui restrições alimentares?",
+    type: "radio",
+    options: [
+      { value: "no", label: "Não" },
+      { value: "yes", label: "Sim" },
+    ],
+  },
+  {
+    id: "mealsPerDay",
+    title: "Quantas refeições você costuma fazer por dia?",
+    type: "radio",
+    options: [
+      { value: "3", label: "3 refeições" },
+      { value: "4", label: "4 refeições" },
+      { value: "5", label: "5 refeições" },
+      { value: "6", label: "6 refeições" },
+    ],
+  },
+  {
+    id: "activityLevel",
+    title: "Qual é o seu nível de atividade física?",
+    type: "radio",
+    options: [
+      { value: "low", label: "Baixo - Sedentária" },
+      { value: "moderate", label: "Moderado - Exercícios 2-3x/semana" },
+      { value: "high", label: "Alto - Exercícios 4+ vezes/semana" },
+    ],
+  },
+]
+
+export default function OnboardingPage() {
+  const router = useRouter()
+  const [currentStep, setCurrentStep] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState<FormData>({
+    goal: "",
     age: "",
-    gender: "",
     weight: "",
     height: "",
+    hasRestrictions: "",
+    restrictions: "",
+    mealsPerDay: "",
     activityLevel: "",
-    dietaryRestrictions: "",
-    goal: "",
   })
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState("")
-  const router = useRouter()
-  const user = useUser()
-  const supabase = useSupabaseClient()
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+  const progress = ((currentStep + 1) / questions.length) * 100
+
+  const handleNext = async () => {
+    if (currentStep < questions.length - 1) {
+      setCurrentStep(currentStep + 1)
+    } else {
+      await handleFinish()
+    }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
+  const handleFinish = async () => {
+    setLoading(true)
 
     try {
-      // Generate diet plan
-      const response = await fetch("/api/generate-diet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Falha ao gerar dieta")
-      }
-
-      const dietPlan = await response.json()
-
-      // Save to database if user is authenticated
-      if (user) {
-        const { error } = await supabase.from("diets").insert({
-          user_id: user.id,
-          plan: dietPlan,
-          created_at: new Date().toISOString(),
-        })
-
-        if (error) {
-          console.error("Error saving diet:", error)
-          // Continue anyway - we have the diet plan
-        }
-      }
-
-      // Store in localStorage as backup
       // Salvar dados do formulário para geração da dieta
-      const dietFormData = {
-        goal: formData.goal,
-        age: formData.age,
-        weight: formData.weight,
-        height: formData.height,
-        activityLevel: formData.activityLevel,
-        restrictions: formData.dietaryRestrictions,
-        mealsPerDay: 3, // Assuming a default value of 3 meals per day
-      }
-
-      console.log("Saving diet form data:", dietFormData)
-      localStorage.setItem("dietFormData", JSON.stringify(dietFormData))
+      localStorage.setItem("dietFormData", JSON.stringify(formData))
 
       // Navegar para a tela de loading
       router.push("/loading")
     } catch (error) {
       console.error("Error:", error)
-      setError("Erro ao gerar sua dieta. Tente novamente.")
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
+    } else {
+      router.push("/")
+    }
+  }
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const currentQuestion = questions[currentStep]
+  const currentValue = formData[currentQuestion.id as keyof FormData]
+  const isValid = currentValue && currentValue.trim() !== ""
+
   return (
-    <div className="container mx-auto mt-10">
-      <h1 className="text-2xl font-bold mb-5">Crie seu plano alimentar personalizado</h1>
-      <GrokStatus />
-      {error && <div className="text-red-500 mb-5">{error}</div>}
-      <form onSubmit={handleSubmit} className="max-w-lg">
-        <div className="mb-4">
-          <label htmlFor="age" className="block text-gray-700 text-sm font-bold mb-2">
-            Idade:
-          </label>
-          <input
-            type="number"
-            id="age"
-            name="age"
-            value={formData.age}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50">
+      <div className="container mx-auto px-4 py-8 max-w-md">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" size="icon" onClick={handleBack} className="text-gray-600">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              {currentStep + 1} de {questions.length}
+            </p>
+          </div>
+          <div className="w-10" />
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="gender" className="block text-gray-700 text-sm font-bold mb-2">
-            Gênero:
-          </label>
-          <select
-            id="gender"
-            name="gender"
-            value={formData.gender}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          >
-            <option value="">Selecione</option>
-            <option value="male">Masculino</option>
-            <option value="female">Feminino</option>
-            <option value="other">Outro</option>
-          </select>
+        {/* Progress */}
+        <div className="mb-8">
+          <Progress value={progress} className="h-2" />
         </div>
 
-        <div className="mb-4">
-          <label htmlFor="weight" className="block text-gray-700 text-sm font-bold mb-2">
-            Peso (kg):
-          </label>
-          <input
-            type="number"
-            id="weight"
-            name="weight"
-            value={formData.weight}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
+        {/* Question Card */}
+        <Card className="border-pink-200 bg-white/80 backdrop-blur-sm mb-8">
+          <CardHeader>
+            <CardTitle className="text-xl text-gray-800 text-center">{currentQuestion.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {currentQuestion.type === "radio" && (
+              <RadioGroup
+                value={currentValue}
+                onValueChange={(value) => handleInputChange(currentQuestion.id, value)}
+                className="space-y-3"
+              >
+                {currentQuestion.options?.map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <RadioGroupItem value={option.value} id={option.value} />
+                    <Label
+                      htmlFor={option.value}
+                      className="flex-1 cursor-pointer p-3 rounded-lg border border-gray-200 hover:bg-pink-50 transition-colors"
+                    >
+                      {option.label}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            )}
 
-        <div className="mb-4">
-          <label htmlFor="height" className="block text-gray-700 text-sm font-bold mb-2">
-            Altura (cm):
-          </label>
-          <input
-            type="number"
-            id="height"
-            name="height"
-            value={formData.height}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
+            {currentQuestion.type === "input" && (
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    type={currentQuestion.inputType}
+                    placeholder={currentQuestion.placeholder}
+                    value={currentValue}
+                    onChange={(e) => handleInputChange(currentQuestion.id, e.target.value)}
+                    className="text-center text-lg py-6"
+                  />
+                  {currentQuestion.suffix && (
+                    <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {currentQuestion.suffix}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
-        <div className="mb-4">
-          <label htmlFor="activityLevel" className="block text-gray-700 text-sm font-bold mb-2">
-            Nível de atividade:
-          </label>
-          <select
-            id="activityLevel"
-            name="activityLevel"
-            value={formData.activityLevel}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          >
-            <option value="">Selecione</option>
-            <option value="sedentary">Sedentário</option>
-            <option value="lightlyActive">Levemente ativo</option>
-            <option value="moderatelyActive">Moderadamente ativo</option>
-            <option value="veryActive">Muito ativo</option>
-            <option value="extraActive">Extremamente ativo</option>
-          </select>
-        </div>
+            {/* Restrictions textarea */}
+            {currentQuestion.id === "hasRestrictions" && formData.hasRestrictions === "yes" && (
+              <div className="space-y-2">
+                <Label htmlFor="restrictions">Especifique suas restrições:</Label>
+                <Textarea
+                  id="restrictions"
+                  placeholder="Ex: Intolerância à lactose, vegetariana, alergia a nozes..."
+                  value={formData.restrictions}
+                  onChange={(e) => handleInputChange("restrictions", e.target.value)}
+                  className="min-h-[100px]"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        <div className="mb-4">
-          <label htmlFor="dietaryRestrictions" className="block text-gray-700 text-sm font-bold mb-2">
-            Restrições alimentares:
-          </label>
-          <input
-            type="text"
-            id="dietaryRestrictions"
-            name="dietaryRestrictions"
-            value={formData.dietaryRestrictions}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label htmlFor="goal" className="block text-gray-700 text-sm font-bold mb-2">
-            Objetivo:
-          </label>
-          <select
-            id="goal"
-            name="goal"
-            value={formData.goal}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          >
-            <option value="">Selecione</option>
-            <option value="weightLoss">Perda de peso</option>
-            <option value="muscleGain">Ganho de massa muscular</option>
-            <option value="maintainWeight">Manter o peso</option>
-          </select>
-        </div>
-
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          disabled={isLoading}
+        {/* Navigation */}
+        <Button
+          onClick={handleNext}
+          disabled={!isValid || loading}
+          className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white py-6 text-lg font-semibold rounded-xl shadow-lg disabled:opacity-50"
         >
-          {isLoading ? "Gerando..." : "Gerar Plano Alimentar"}
-        </button>
-      </form>
+          {loading ? (
+            <div className="flex items-center space-x-2">
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Salvando...</span>
+            </div>
+          ) : currentStep === questions.length - 1 ? (
+            "Gerar Minha Dieta"
+          ) : (
+            "Próximo"
+          )}
+          {!loading && <ArrowRight className="w-5 h-5 ml-2" />}
+        </Button>
+      </div>
     </div>
   )
 }
-
-export default OnboardingPage

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,7 +14,6 @@ import { LockedContent } from "@/components/locked-content"
 import { ProBadge } from "@/components/pro-badge"
 import { useSupa } from "@/contexts/supa-provider"
 import { NotificationService } from "@/lib/notifications"
-import { DietDebug } from "@/components/diet-debug"
 
 interface DietPlan {
   totalCalories: number
@@ -34,16 +33,24 @@ export default function DietPage() {
   const [dietPlan, setDietPlan] = useState<DietPlan | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [currentDay, setCurrentDay] = useState(1)
+  const [error, setError] = useState<string | null>(null)
 
-  const { user, supabase } = useSupa()
+  const { user, supabase, isConnected } = useSupa()
 
-  useEffect(() => {
-    const loadDiet = async () => {
-      setIsLoading(true)
+  const loadDiet = useCallback(async () => {
+    if (isLoading) return // Prevent multiple calls
 
-      try {
-        // First try to load from database if user is authenticated
-        if (user) {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      console.log("🔄 Loading diet plan...")
+
+      // First try to load from database if user is authenticated and connected
+      if (user && supabase && isConnected) {
+        console.log("📊 Trying to load from database...")
+
+        try {
           const { data, error } = await supabase
             .from("diets")
             .select("plan")
@@ -52,66 +59,68 @@ export default function DietPage() {
             .limit(1)
             .single()
 
-          if (data?.plan) {
+          if (data?.plan && !error) {
+            console.log("✅ Diet loaded from database")
             setDietPlan(data.plan)
             setIsLoading(false)
             return
+          } else if (error && error.code !== "PGRST116") {
+            console.warn("⚠️ Database error:", error)
           }
+        } catch (dbError) {
+          console.warn("⚠️ Database connection error:", dbError)
         }
-
-        // Fallback to localStorage
-        const storedDiet = localStorage.getItem("currentDiet")
-        if (storedDiet) {
-          try {
-            const parsedDiet = JSON.parse(storedDiet)
-            setDietPlan(parsedDiet)
-            setIsLoading(false)
-            return
-          } catch (error) {
-            console.error("Error parsing stored diet:", error)
-          }
-        }
-
-        // If no diet found anywhere, redirect to onboarding
-        router.push("/onboarding")
-      } catch (err) {
-        console.error("Unexpected error:", err)
-
-        // Try localStorage as final fallback
-        const storedDiet = localStorage.getItem("currentDiet")
-        if (storedDiet) {
-          try {
-            const parsedDiet = JSON.parse(storedDiet)
-            setDietPlan(parsedDiet)
-          } catch (error) {
-            router.push("/onboarding")
-          }
-        } else {
-          router.push("/onboarding")
-        }
-      } finally {
-        setIsLoading(false)
       }
-    }
 
+      // Fallback to localStorage
+      console.log("💾 Trying to load from localStorage...")
+      const storedDiet = localStorage.getItem("currentDiet")
+      if (storedDiet) {
+        try {
+          const parsedDiet = JSON.parse(storedDiet)
+          console.log("✅ Diet loaded from localStorage")
+          setDietPlan(parsedDiet)
+          setIsLoading(false)
+          return
+        } catch (parseError) {
+          console.error("❌ Error parsing stored diet:", parseError)
+        }
+      }
+
+      // If no diet found anywhere, redirect to onboarding
+      console.log("❌ No diet found, redirecting to onboarding")
+      router.push("/onboarding")
+    } catch (err) {
+      console.error("❌ Unexpected error loading diet:", err)
+      setError("Erro ao carregar dieta. Tente novamente.")
+    } finally {
+      setIsLoading(false)
+    }
+  }, [supabase, isConnected, router, isLoading]) // Removed user?.id from dependency array
+
+  useEffect(() => {
     loadDiet()
-  }, [router, user, supabase])
+  }, []) // Empty dependency array to run only once
 
   useEffect(() => {
     if (dietPlan?.meals) {
       // Schedule meal reminders
-      NotificationService.scheduleMealReminders(dietPlan.meals)
+      try {
+        NotificationService.scheduleMealReminders(dietPlan.meals)
+      } catch (error) {
+        console.warn("Warning scheduling notifications:", error)
+      }
     }
   }, [dietPlan])
 
-  const handleEditAnswers = () => {
+  const handleEditAnswers = useCallback(() => {
     router.push("/onboarding")
-  }
+  }, [router])
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = useCallback(() => {
     // Simulate PDF download
     alert("Funcionalidade de download em desenvolvimento!")
-  }
+  }, [])
 
   if (isLoading) {
     return (
@@ -119,6 +128,19 @@ export default function DietPage() {
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-600">Carregando sua dieta...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-rose-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Button onClick={loadDiet} className="bg-pink-500 hover:bg-pink-600">
+            Tentar Novamente
+          </Button>
         </div>
       </div>
     )
@@ -295,11 +317,6 @@ export default function DietPage() {
               </ul>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Debug Component - Remove in production */}
-        <div className="mt-6">
-          <DietDebug />
         </div>
 
         <BottomNavigation currentPage="diet" />

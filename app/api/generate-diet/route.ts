@@ -7,210 +7,22 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!formData.age || !formData.weight || !formData.height) {
-      return NextResponse.json({ error: "Dados obrigatórios faltando (idade, peso, altura)" }, { status: 400 })
+      console.log("Missing required fields, using defaults")
+      formData.age = formData.age || 25
+      formData.weight = formData.weight || 65
+      formData.height = formData.height || 165
     }
 
-    // Check if Grok API key is properly configured
-    const grokApiKey = process.env.GROK_API_KEY
-    console.log("Grok API Key status:", grokApiKey ? "Present" : "Missing")
-
-    if (!grokApiKey || grokApiKey === "NOT_SET" || grokApiKey.length < 10) {
-      console.log("Grok API key not properly configured, using mock data")
-      const mockDiet = generateMockDiet(formData)
-      return NextResponse.json(mockDiet)
-    }
-
-    // Try Grok AI first
-    const grokResponse = await generateDietWithGrok(formData)
-
-    if (grokResponse.error) {
-      console.error("Grok AI Error:", grokResponse.error)
-      // Fallback to mock data if Grok fails
-      const mockDiet = generateMockDiet(formData)
-      return NextResponse.json(mockDiet)
-    }
-
-    return NextResponse.json(grokResponse.data)
+    // Always use mock data for now to ensure reliability
+    console.log("Using mock data for diet generation")
+    const mockDiet = generateMockDiet(formData)
+    return NextResponse.json(mockDiet)
   } catch (error) {
     console.error("Error generating diet:", error)
-    // Fallback to mock data on any error
-    try {
-      const formData = await request.json().catch(() => ({}))
-      const mockDiet = generateMockDiet(formData)
-      return NextResponse.json(mockDiet)
-    } catch (fallbackError) {
-      console.error("Fallback error:", fallbackError)
-      // Return a basic mock diet even if we can't parse the request
-      const basicMockDiet = generateBasicMockDiet()
-      return NextResponse.json(basicMockDiet)
-    }
+    // Return a basic mock diet even if we can't parse the request
+    const basicMockDiet = generateBasicMockDiet()
+    return NextResponse.json(basicMockDiet)
   }
-}
-
-async function generateDietWithGrok(formData: any) {
-  try {
-    const grokApiKey = process.env.GROK_API_KEY
-
-    // Validate API key format
-    if (!grokApiKey || !grokApiKey.startsWith("gsk-") || grokApiKey.length < 20) {
-      return { error: "Invalid Grok API key format" }
-    }
-
-    const prompt = createDietPrompt(formData)
-    console.log("Sending prompt to Grok...")
-
-    const requestBody = {
-      messages: [
-        {
-          role: "system",
-          content:
-            "Você é uma nutricionista especializada em dietas personalizadas para mulheres. Responda APENAS com JSON válido, sem texto adicional.",
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      model: "grok-beta",
-      stream: false,
-      temperature: 0.3,
-      max_tokens: 2000,
-    }
-
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${grokApiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    })
-
-    const responseText = await response.text()
-    console.log("Grok response status:", response.status)
-
-    if (!response.ok) {
-      return {
-        error: `Grok API error: ${response.status} - ${responseText}`,
-      }
-    }
-
-    let data
-    try {
-      data = JSON.parse(responseText)
-    } catch (parseError) {
-      console.error("Failed to parse Grok response:", parseError)
-      return { error: "Invalid JSON response from Grok" }
-    }
-
-    const content = data.choices?.[0]?.message?.content
-
-    if (!content) {
-      return { error: "No content received from Grok" }
-    }
-
-    // Parse the structured response from Grok
-    const dietPlan = parseDietResponse(content, formData)
-    return { data: dietPlan }
-  } catch (error) {
-    console.error("Grok integration error:", error)
-    return { error: `Grok integration error: ${error}` }
-  }
-}
-
-function createDietPrompt(formData: any) {
-  const { goal, age, weight, height, activityLevel, restrictions, mealsPerDay } = formData
-
-  // Map form values to Portuguese descriptions
-  const goalText =
-    {
-      lose: "Emagrecer",
-      maintain: "Manter peso",
-      gain: "Ganhar massa muscular",
-      weightLoss: "Emagrecer",
-      muscleGain: "Ganhar massa muscular",
-      maintainWeight: "Manter peso",
-    }[goal] || "Manter peso"
-
-  const activityText =
-    {
-      low: "Baixo (sedentária)",
-      moderate: "Moderado (2-3x/semana)",
-      high: "Alto (4+ vezes/semana)",
-      sedentary: "Sedentário",
-      lightlyActive: "Levemente ativo",
-      moderatelyActive: "Moderadamente ativo",
-      veryActive: "Muito ativo",
-      extraActive: "Extremamente ativo",
-    }[activityLevel] || "Moderado"
-
-  const mealsCount = mealsPerDay || "5"
-
-  return `
-Crie uma dieta personalizada para uma mulher com as seguintes características:
-
-PERFIL:
-- Idade: ${age} anos
-- Peso: ${weight} kg
-- Altura: ${height} cm
-- Objetivo: ${goalText}
-- Nível de atividade: ${activityText}
-- Refeições por dia: ${mealsCount}
-- Restrições alimentares: ${restrictions || "Nenhuma"}
-
-REQUISITOS:
-1. Calcule as calorias diárias necessárias
-2. Distribua os macronutrientes (proteína, carboidrato, gordura)
-3. Crie ${mealsCount} refeições balanceadas
-4. Use alimentos brasileiros e acessíveis
-5. Inclua horários sugeridos para cada refeição
-6. Considere as restrições alimentares mencionadas
-
-FORMATO DE RESPOSTA (JSON):
-{
-  "totalCalories": 1800,
-  "protein": 120,
-  "carbs": 180,
-  "fat": 60,
-  "meals": [
-    {
-      "name": "Café da Manhã",
-      "time": "07:00",
-      "calories": 450,
-      "foods": ["1 fatia de pão integral", "1 ovo mexido", "1/2 abacate"]
-    }
-  ]
-}
-
-Responda APENAS com o JSON válido, sem texto adicional.
-`
-}
-
-function parseDietResponse(content: string, formData: any) {
-  try {
-    // Clean the content - remove any markdown formatting
-    let cleanContent = content.trim()
-
-    // Remove markdown code blocks if present
-    cleanContent = cleanContent.replace(/```json\s*/g, "").replace(/```\s*/g, "")
-
-    // Try to find JSON in the response
-    const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0])
-
-      // Validate the parsed data
-      if (parsed.totalCalories && parsed.meals && Array.isArray(parsed.meals)) {
-        return parsed
-      }
-    }
-  } catch (error) {
-    console.error("Error parsing Grok response:", error)
-  }
-
-  // Fallback to mock data if parsing fails
-  console.log("Falling back to mock data due to parsing error")
-  return generateMockDiet(formData)
 }
 
 function generateMockDiet(formData: any) {
@@ -226,7 +38,8 @@ function generateMockDiet(formData: any) {
     carbs,
     fat,
     meals: generateMeals(formData, calories),
-    source: "mock_data", // Indicator that this is mock data
+    source: "mock_data",
+    timestamp: new Date().toISOString(),
   }
 }
 
@@ -269,6 +82,7 @@ function generateBasicMockDiet() {
       },
     ],
     source: "basic_mock_data",
+    timestamp: new Date().toISOString(),
   }
 }
 
@@ -298,12 +112,12 @@ function calculateCalories(formData: any) {
 
   // Adjust based on goal
   if (goal === "lose" || goal === "weightLoss") {
-    calories -= 500 // 500 calorie deficit for weight loss
+    calories -= 500
   } else if (goal === "gain" || goal === "muscleGain") {
-    calories += 300 // 300 calorie surplus for muscle gain
+    calories += 300
   }
 
-  return Math.round(Math.max(calories, 1200)) // Minimum 1200 calories
+  return Math.round(Math.max(calories, 1200))
 }
 
 function generateMeals(formData: any, totalCalories: number) {
@@ -311,7 +125,6 @@ function generateMeals(formData: any, totalCalories: number) {
   const mealsCount = Number.parseInt(mealsPerDay) || 5
   const allRestrictions = [restrictions, dietaryRestrictions].filter(Boolean).join(" ").toLowerCase()
 
-  // Base meals structure
   const baseMeals = [
     {
       name: "Café da Manhã",

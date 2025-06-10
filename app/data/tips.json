@@ -1,52 +1,52 @@
 [
   {
     "id": 1,
-    "tip": "Drink 500 ml of water before each meal to curb hunger.",
-    "category": "hydration"
+    "tip": "Beba 500 ml de água antes de cada refeição para reduzir a fome.",
+    "category": "hidratação"
   },
   {
     "id": 2,
-    "tip": "Eat slowly and mindfully to recognize when you're full.",
+    "tip": "Coma devagar e com atenção para reconhecer quando estiver satisfeita.",
     "category": "mindfulness"
   },
   {
     "id": 3,
-    "tip": "Add protein to every meal to stay fuller longer.",
-    "category": "nutrition"
+    "tip": "Adicione proteína em todas as refeições para se manter saciada por mais tempo.",
+    "category": "nutrição"
   },
   {
     "id": 4,
-    "tip": "Prepare your meals in advance to avoid unhealthy choices when hungry.",
-    "category": "planning"
+    "tip": "Prepare suas refeições com antecedência para evitar escolhas não saudáveis quando estiver com fome.",
+    "category": "planejamento"
   },
   {
     "id": 5,
-    "tip": "Use smaller plates to control portion sizes naturally.",
-    "category": "portion"
+    "tip": "Use pratos menores para controlar naturalmente o tamanho das porções.",
+    "category": "porção"
   },
   {
     "id": 6,
-    "tip": "Include vegetables in at least two meals per day.",
-    "category": "nutrition"
+    "tip": "Inclua vegetais em pelo menos duas refeições por dia.",
+    "category": "nutrição"
   },
   {
     "id": 7,
-    "tip": "Take a 10-minute walk after meals to aid digestion.",
-    "category": "activity"
+    "tip": "Faça uma caminhada de 10 minutos após as refeições para ajudar na digestão.",
+    "category": "atividade"
   },
   {
     "id": 8,
-    "tip": "Avoid eating 2-3 hours before bedtime for better sleep.",
+    "tip": "Evite comer 2-3 horas antes de dormir para um sono melhor.",
     "category": "timing"
   },
   {
     "id": 9,
-    "tip": "Replace sugary drinks with water, tea, or infused water.",
-    "category": "hydration"
+    "tip": "Substitua bebidas açucaradas por água, chá ou água saborizada.",
+    "category": "hidratação"
   },
   {
     "id": 10,
-    "tip": "Read nutrition labels to make informed food choices.",
-    "category": "awareness"
+    "tip": "Leia os rótulos nutricionais para fazer escolhas alimentares informadas.",
+    "category": "consciência"
   }
 ]
